@@ -1,7 +1,14 @@
 <script setup>
+import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
 import AppFooter from '@/components/AppFooter.vue'
+import { useGameStore } from '@/stores/gameStore'
+
+const store = useGameStore()
+onMounted(() => {
+  store.fetchInitialData()
+})
 </script>
 
 <template>

@@ -9,13 +9,13 @@ const router = useRouter()
 const selectedPlayers = ref([])
 const errorMsg = ref('')
 
-const handleStartGame = () => {
+const handleStartGame = async () => {
   if (selectedPlayers.value.length < 2) {
     errorMsg.value = 'Please select at least 2 players to start a game.'
     return
   }
   errorMsg.value = ''
-  store.startGame(selectedPlayers.value)
+  await store.startGame(selectedPlayers.value)
   router.push('/active')
 }
 </script>

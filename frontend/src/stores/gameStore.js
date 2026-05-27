@@ -1,46 +1,69 @@
 import { defineStore } from 'pinia'
+import axios from 'axios'
+
+const API_URL = 'http://localhost:3000/api'
 
 export const useGameStore = defineStore('game', {
   state: () => ({
-    availablePlayers: ['Sophie', 'Simon', 'Daniel', 'Luca', 'Thomas', 'Anja'],
-    activeGame: JSON.parse(localStorage.getItem('hosnObiActiveGame')) || null,
-    pastGames: JSON.parse(localStorage.getItem('hosnObiHistory')) || [],
+    availablePlayers: [],
+    activeGame: null,
+    pastGames: []
   }),
 
   actions: {
-    syncStorage() {
-      if (this.activeGame) {
-        localStorage.setItem('hosnObiActiveGame', JSON.stringify(this.activeGame))
-      } else {
-        localStorage.removeItem('hosnObiActiveGame')
+    async fetchInitialData() {
+      try {
+        const playersRes = await axios.get(`${API_URL}/players`);
+        this.availablePlayers = playersRes.data.players || [];
+
+        const pastRes = await axios.get(`${API_URL}/games`);
+        this.pastGames = pastRes.data.games || [];
+
+        const activeRes = await axios.get(`${API_URL}/games/active`);
+        this.activeGame = activeRes.data;
+      } catch (error) {
+        if (error.response && error.response.status !== 404) {
+            console.error("Error fetching initial data:", error);
+        }
       }
-      localStorage.setItem('hosnObiHistory', JSON.stringify(this.pastGames))
     },
 
-    startGame(players) {
-      this.activeGame = {
-        players: [...players],
-        rounds: [],
+    async startGame(players) {
+      try {
+        const res = await axios.post(`${API_URL}/games/active`, { players });
+        this.activeGame = res.data;
+      } catch (error) {
+        console.error("Error starting game:", error);
       }
-      this.syncStorage()
     },
 
-    submitRound(roundScores) {
-      this.activeGame.rounds.push({ ...roundScores })
-      this.syncStorage()
-    },
-
-    endGame() {
-      if (this.activeGame && this.activeGame.rounds.length > 0) {
-        this.pastGames.push(this.activeGame)
+    async submitRound(roundScores) {
+      try {
+        const res = await axios.put(`${API_URL}/games/active/rounds`, roundScores);
+        this.activeGame = res.data;
+      } catch (error) {
+        console.error("Error submitting round:", error);
       }
-      this.activeGame = null
-      this.syncStorage()
     },
 
-    abandonGame() {
-      this.activeGame = null
-      this.syncStorage()
+    async endGame() {
+      try {
+        if (!this.activeGame) return;
+        const res = await axios.post(`${API_URL}/games`, this.activeGame);
+        this.pastGames.push(res.data);
+        this.activeGame = null;
+      } catch (error) {
+        console.error("Error ending game:", error);
+      }
     },
-  },
+
+    async abandonGame() {
+      try {
+        await axios.delete(`${API_URL}/games/active`);
+        this.activeGame = null;
+      } catch (error) {
+        console.error("Error abandoning game:", error);
+      }
+    }
+  }
 })
